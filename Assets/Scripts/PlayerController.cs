@@ -10,6 +10,9 @@ public class PlayerController : MonoBehaviour
 
     public Transform playerCamera;
 
+    [Header("摄像头高度调整")]
+    public float cameraHeight = 0.6f;
+
     private CharacterController controller;
 
     private float xRotation = 0f;
@@ -19,6 +22,18 @@ public class PlayerController : MonoBehaviour
         controller = GetComponent<CharacterController>();
 
         Cursor.lockState = CursorLockMode.Locked;
+
+        AdjustCameraHeight();
+    }
+
+    void AdjustCameraHeight()
+    {
+        if (playerCamera != null)
+        {
+            Vector3 localPos = playerCamera.localPosition;
+            localPos.y = cameraHeight;
+            playerCamera.localPosition = localPos;
+        }
     }
 
     void Update()

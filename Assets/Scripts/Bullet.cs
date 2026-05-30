@@ -26,7 +26,15 @@ public class Bullet : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            Destroy(collision.gameObject);
+            EnemyAI enemy = collision.gameObject.GetComponent<EnemyAI>();
+            if (enemy != null)
+            {
+                enemy.ReturnToPool();
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.OnEnemyKilled();
+                }
+            }
         }
 
         ReturnToPool();
