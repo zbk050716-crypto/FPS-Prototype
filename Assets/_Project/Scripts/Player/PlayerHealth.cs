@@ -43,6 +43,13 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    public void ResetHealth()
+    {
+        isDead = false;
+        currentHealth = maxHealth;
+        UpdateUI();
+    }
+
     void UpdateUI()
     {
         if (healthText != null)
@@ -59,14 +66,9 @@ public class PlayerHealth : MonoBehaviour
 
         Debug.Log("玩家死亡");
 
-        if (gameOverPanel != null)
+        if (GameManager.Instance != null)
         {
-            gameOverPanel.SetActive(true);
+            GameManager.Instance.GameOver();
         }
-
-        Time.timeScale = 0f;
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 }

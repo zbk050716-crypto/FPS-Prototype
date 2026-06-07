@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI;
 
 public enum EnemyState
 {
@@ -8,13 +9,14 @@ public enum EnemyState
     Attack
 }
 
-public class EnemyAI : MonoBehaviour
+public class EnemyAI : MonoBehaviour, IDamageable
 {
     private NavMeshAgent agent;
 
     [Header("Target")]
     public Transform player;
     private PlayerHealth playerHealth;
+    private Camera playerCamera;
 
     [Header("State")]
     public EnemyState currentState;
@@ -27,6 +29,21 @@ public class EnemyAI : MonoBehaviour
     public int damage = 10;
     public float attackCooldown = 1.5f;
     private float nextAttackTime;
+
+    // --- MODIFIED: Health System ---
+    [Header("Health")]
+    public int maxHealth = 100;
+    private int currentHealth;
+
+    [Header("Health Bar UI")]
+    public Slider hpSlider;
+    public Image hpFillImage;
+    public Canvas hpCanvas;
+    public float hpBarHeight = 2.5f;
+
+    [Header("VFX")]
+    public GameObject deathParticlePrefab;
+    public float deathParticleLifetime = 2f;
 
     [Header("Speed")]
     private float baseSpeed;
@@ -41,6 +58,7 @@ public class EnemyAI : MonoBehaviour
     private Vector3 patrolTarget;
     private float patrolTimer;
 
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -50,6 +68,7 @@ public class EnemyAI : MonoBehaviour
         {
             player = playerObj.transform;
             playerHealth = playerObj.GetComponent<PlayerHealth>();
+            playerCamera = playerObj.GetComponentInChildren<Camera>();
         }
 
         PlayerController pc = playerObj?.GetComponent<PlayerController>();
@@ -57,14 +76,22 @@ public class EnemyAI : MonoBehaviour
 
         agent.speed = baseSpeed * speedMultiplier;
 
+        InitHealth();
         FixHeight();
         InitializePatrol();
+    }
+
+    void InitHealth()
+    {
+        currentHealth = maxHealth;
+        UpdateHPBar();
     }
 
     void OnEnable()
     {
         if (agent != null)
         {
+            InitHealth();
             FixHeight();
             InitializePatrol();
         }
@@ -78,6 +105,62 @@ public class EnemyAI : MonoBehaviour
             agent.ResetPath();
         }
     }
+
+    // =========================================
+    // IDamageable IMPLEMENTATION (modified: multi-hit)
+    // =========================================
+
+    public void TakeDamage(int amount)
+    {
+        // --- MODIFIED: subtract health instead of insta-kill ---
+        currentHealth -= amount;
+        UpdateHPBar();
+
+        Debug.Log($"[EnemyAI] Took {amount} damage, HP: {currentHealth}/{maxHealth}");
+
+        if (currentHealth <= 0)
+            Die();
+    }
+
+    void Die()
+    {
+        // ----- Death VFX -----
+        if (deathParticlePrefab != null)
+        {
+            GameObject fx = Instantiate(deathParticlePrefab, transform.position, Quaternion.identity);
+            Destroy(fx, deathParticleLifetime);
+        }
+
+        ReturnToPool();
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.OnEnemyKilled();
+    }
+
+    void UpdateHPBar()
+    {
+        if (hpSlider != null)
+        {
+            hpSlider.maxValue = maxHealth;
+            hpSlider.value = currentHealth;
+        }
+
+        // --- MODIFIED: fill color (green → yellow → red) ---
+        if (hpFillImage != null)
+        {
+            float pct = (float)currentHealth / maxHealth;
+            if (pct > 0.6f)
+                hpFillImage.color = Color.green;
+            else if (pct > 0.3f)
+                hpFillImage.color = Color.yellow;
+            else
+                hpFillImage.color = Color.red;
+        }
+    }
+
+    // =========================================
+    // STATE SYSTEM
+    // =========================================
 
     void InitializePatrol()
     {
@@ -96,49 +179,54 @@ public class EnemyAI : MonoBehaviour
     {
         if (player == null) return;
 
+        // --- MODIFIED: HP bar always faces player camera ---
+        FaceCamera();
+
         float distance = Vector3.Distance(transform.position, player.position);
 
         UpdateState(distance);
         HandleState();
     }
 
-    // ---------------- STATE SYSTEM ----------------
+    void FaceCamera()
+    {
+        if (hpCanvas == null) return;
+
+        Camera cam = playerCamera != null ? playerCamera : Camera.main;
+        if (cam == null) return;
+
+        hpCanvas.transform.LookAt(cam.transform);
+        hpCanvas.transform.Rotate(0, 180, 0);
+
+        // Keep HP bar above enemy
+        Vector3 hpPos = transform.position;
+        hpPos.y += hpBarHeight;
+        hpCanvas.transform.position = hpPos;
+    }
 
     void UpdateState(float distance)
     {
         if (distance <= attackRange)
-        {
             currentState = EnemyState.Attack;
-        }
         else if (distance <= chaseRange)
-        {
             currentState = EnemyState.Chase;
-        }
         else
-        {
             currentState = EnemyState.Patrol;
-        }
     }
 
     void HandleState()
     {
         switch (currentState)
         {
-            case EnemyState.Patrol:
-                Patrol();
-                break;
-
-            case EnemyState.Chase:
-                Chase();
-                break;
-
-            case EnemyState.Attack:
-                AttackState();
-                break;
+            case EnemyState.Patrol: Patrol(); break;
+            case EnemyState.Chase:  Chase();  break;
+            case EnemyState.Attack: AttackState(); break;
         }
     }
 
-    // ---------------- BEHAVIOUR ----------------
+    // =========================================
+    // BEHAVIOUR
+    // =========================================
 
     void Patrol()
     {
@@ -166,9 +254,7 @@ public class EnemyAI : MonoBehaviour
     void AttackState()
     {
         agent.isStopped = true;
-
         transform.LookAt(player);
-
         TryAttack();
     }
 
@@ -179,12 +265,14 @@ public class EnemyAI : MonoBehaviour
         nextAttackTime = Time.time + attackCooldown;
 
         if (playerHealth != null)
-        {
             playerHealth.TakeDamage(damage);
-        }
 
         Debug.Log("Enemy Attack Player");
     }
+
+    // =========================================
+    // UTILITY
+    // =========================================
 
     Vector3 GetRandomPatrolPoint()
     {
@@ -197,14 +285,10 @@ public class EnemyAI : MonoBehaviour
 
         NavMeshHit hit;
         if (NavMesh.SamplePosition(randomPoint, out hit, patrolRadius * 2, NavMesh.AllAreas))
-        {
             return hit.position;
-        }
 
         return transform.position;
     }
-
-    // ---------------- UTILITY ----------------
 
     void FixHeight()
     {

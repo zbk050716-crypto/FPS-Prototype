@@ -6,6 +6,7 @@ public enum GameState
 {
     Start,
     Playing,
+    Pause,
     GameOver
 }
 
@@ -19,7 +20,11 @@ public class GameManager : MonoBehaviour
     // ================= UI =================
     public GameObject startPanel;
     public GameObject gamePanel;
+    public GameObject pausePanel;
     public GameObject gameOverPanel;
+
+    public GameObject crosshair;
+    public GameObject weaponInfoPanel;
 
     // ================= WAVE DATA =================
     private int level = 1;
@@ -36,23 +41,9 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        InitializeUI();
     }
 
-    void InitializeUI()
-    {
-        if (startPanel == null)
-            startPanel = GameObject.Find("StartPanel");
-        if (gamePanel == null)
-            gamePanel = GameObject.Find("GamePanel");
-        if (gameOverPanel == null)
-            gameOverPanel = GameObject.Find("GameOverPanel");
-
-        if (startPanel == null || gamePanel == null || gameOverPanel == null)
-        {
-            Debug.LogError("GameManager: 未找到所有UI Panel！请在场景中创建 StartPanel, GamePanel, GameOverPanel");
-        }
-    }
+    
 
     void Start()
     {
@@ -74,18 +65,31 @@ public class GameManager : MonoBehaviour
             case GameState.Start:
                 if (startPanel != null) startPanel.SetActive(true);
                 Time.timeScale = 0;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
                 break;
 
             case GameState.Playing:
                 if (gamePanel != null) gamePanel.SetActive(true);
+                if (crosshair != null) crosshair.SetActive(true);
+                if (weaponInfoPanel != null) weaponInfoPanel.SetActive(true);
                 Time.timeScale = 1;
-                ResetGame();
-                SpawnInitialEnemy();
+                Cursor.lockState = CursorLockMode.Locked;
+                break;
+
+            case GameState.Pause:
+                Debug.Log("[GameManager] EnterState Pause, pausePanel=" + (pausePanel != null ? pausePanel.name : "NULL"));
+                if (pausePanel != null) pausePanel.SetActive(true);
+                Time.timeScale = 0;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
                 break;
 
             case GameState.GameOver:
                 if (gameOverPanel != null) gameOverPanel.SetActive(true);
                 Time.timeScale = 0;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
                 break;
         }
     }
@@ -94,7 +98,10 @@ public class GameManager : MonoBehaviour
     {
         if (startPanel != null) startPanel.SetActive(false);
         if (gamePanel != null) gamePanel.SetActive(false);
+        if (pausePanel != null) pausePanel.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        if (crosshair != null) crosshair.SetActive(false);
+        if (weaponInfoPanel != null) weaponInfoPanel.SetActive(false);
     }
 
     // =====================================================
@@ -103,12 +110,60 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
+        Debug.Log("[GameManager] StartGame called");
+        ResetGame();
+        ResetPlayer();
+        UpdateUI();
+        SpawnInitialEnemy();
         EnterState(GameState.Playing);
+    }
+
+    void ResetPlayer()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+        {
+            PlayerHealth health = player.GetComponent<PlayerHealth>();
+            if (health != null)
+                health.ResetHealth();
+        }
     }
 
     public void GameOver()
     {
         EnterState(GameState.GameOver);
+    }
+
+    public void TogglePause()
+    {
+        Debug.Log("[GameManager] TogglePause called, CurrentState=" + CurrentState);
+        if (CurrentState == GameState.Playing)
+            EnterState(GameState.Pause);
+        else if (CurrentState == GameState.Pause)
+            EnterState(GameState.Playing);
+    }
+
+    public void ResumeGame()
+    {
+        if (CurrentState == GameState.Pause)
+            EnterState(GameState.Playing);
+    }
+
+    public void ReturnToMainMenu()
+    {
+        ReturnAllEnemies();
+        ResetGame();
+        EnterState(GameState.Start);
+    }
+
+    void ReturnAllEnemies()
+    {
+        for (int i = activeEnemies.Count - 1; i >= 0; i--)
+        {
+            if (activeEnemies[i] != null)
+                activeEnemies[i].ReturnToPool();
+        }
+        activeEnemies.Clear();
     }
 
     public void RestartGame()
@@ -123,6 +178,13 @@ public class GameManager : MonoBehaviour
         killCount = 0;
         targetEnemyCount = 1;
         activeEnemies.Clear();
+    }
+
+    public void QuitGame()
+    {
+        Debug.Log("Quit Game");
+
+        Application.Quit();
     }
 
     // =====================================================
@@ -207,5 +269,13 @@ public class GameManager : MonoBehaviour
     {
         if (UIManager.Instance != null)
             UIManager.Instance.UpdateLevelDisplay(level, killCount);
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            TogglePause();
+        }
     }
 }
