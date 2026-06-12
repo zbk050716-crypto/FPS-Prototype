@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -31,6 +32,8 @@ public class GameManager : MonoBehaviour
     private int killCount = 0;
     private int targetEnemyCount = 1;
 
+    public static Action<int, int> OnKillCountChanged;
+
     [Header("Difficulty")]
     public float baseSpeedMultiplier = 0.8f;
     public float speedIncreasePerLevel = 0.05f;
@@ -43,7 +46,15 @@ public class GameManager : MonoBehaviour
         Instance = this;
     }
 
-    
+    void OnEnable()
+    {
+        EnemyAI.OnEnemyKilled += HandleEnemyKilled;
+    }
+
+    void OnDisable()
+    {
+        EnemyAI.OnEnemyKilled -= HandleEnemyKilled;
+    }
 
     void Start()
     {
@@ -78,7 +89,6 @@ public class GameManager : MonoBehaviour
                 break;
 
             case GameState.Pause:
-                Debug.Log("[GameManager] EnterState Pause, pausePanel=" + (pausePanel != null ? pausePanel.name : "NULL"));
                 if (pausePanel != null) pausePanel.SetActive(true);
                 Time.timeScale = 0;
                 Cursor.lockState = CursorLockMode.None;
@@ -110,10 +120,9 @@ public class GameManager : MonoBehaviour
 
     public void StartGame()
     {
-        Debug.Log("[GameManager] StartGame called");
         ResetGame();
         ResetPlayer();
-        UpdateUI();
+        OnKillCountChanged?.Invoke(level, killCount);
         SpawnInitialEnemy();
         EnterState(GameState.Playing);
     }
@@ -136,7 +145,6 @@ public class GameManager : MonoBehaviour
 
     public void TogglePause()
     {
-        Debug.Log("[GameManager] TogglePause called, CurrentState=" + CurrentState);
         if (CurrentState == GameState.Playing)
             EnterState(GameState.Pause);
         else if (CurrentState == GameState.Pause)
@@ -182,8 +190,6 @@ public class GameManager : MonoBehaviour
 
     public void QuitGame()
     {
-        Debug.Log("Quit Game");
-
         Application.Quit();
     }
 
@@ -193,16 +199,18 @@ public class GameManager : MonoBehaviour
 
     void SpawnInitialEnemy()
     {
-        EnemyPool.Instance.GetEnemy();
+        if (EnemyPool.Instance.GetEnemy() == null)
+            Debug.LogError("[GameManager] 对象池已耗尽，无法生成初始敌人");
     }
 
-    public void OnEnemyKilled()
+    public void HandleEnemyKilled()
     {
         killCount++;
 
         UpdateWave();
-        UpdateUI();
         MaintainEnemyCount();
+
+        OnKillCountChanged?.Invoke(level, killCount);
     }
 
     void MaintainEnemyCount()
@@ -211,7 +219,8 @@ public class GameManager : MonoBehaviour
 
         while (activeCount < targetEnemyCount)
         {
-            EnemyPool.Instance.GetEnemy();
+            if (EnemyPool.Instance.GetEnemy() == null)
+                break;
             activeCount = EnemyPool.Instance.GetActiveEnemyCount();
         }
     }
@@ -259,16 +268,6 @@ public class GameManager : MonoBehaviour
     public void UnregisterEnemy(EnemyAI enemy)
     {
         activeEnemies.Remove(enemy);
-    }
-
-    // =====================================================
-    // UI
-    // =====================================================
-
-    void UpdateUI()
-    {
-        if (UIManager.Instance != null)
-            UIManager.Instance.UpdateLevelDisplay(level, killCount);
     }
 
     void Update()

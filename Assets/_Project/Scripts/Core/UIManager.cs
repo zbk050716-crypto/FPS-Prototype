@@ -14,6 +14,16 @@ public class UIManager : MonoBehaviour
         Instance = this;
     }
 
+    void OnEnable()
+    {
+        GameManager.OnKillCountChanged += UpdateLevelDisplay;
+    }
+
+    void OnDisable()
+    {
+        GameManager.OnKillCountChanged -= UpdateLevelDisplay;
+    }
+
     void Start()
     {
         if (levelText == null)

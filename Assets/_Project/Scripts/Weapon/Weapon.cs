@@ -4,8 +4,11 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     // =========================================
-    // CONFIG (editable directly in Inspector — no ScriptableObject needed)
+    // CONFIG — fallback values (overridden by WeaponData when assigned)
     // =========================================
+
+    [Header("Data Source")]
+    [SerializeField] private WeaponData weaponData;
 
     [Header("Identity")]
     public string weaponName = "New Weapon";
@@ -19,8 +22,12 @@ public class Weapon : MonoBehaviour
     public float range = 100f;
 
     [Header("VFX")]
+    [SerializeField] private GameObject muzzleFlashPrefab;
     public GameObject hitEffectPrefab;
     public float hitEffectLifetime = 1f;
+
+    [Header("Combat")]
+    public LayerMask hitLayers = -1;
 
     // =========================================
     // RUNTIME STATE
@@ -38,22 +45,48 @@ public class Weapon : MonoBehaviour
     // =========================================
 
     [System.NonSerialized] public Camera fpsCamera;
-    [System.NonSerialized] public Transform firePoint;
+    public Transform firePoint;
 
     // =========================================
     // INTERNAL
     // =========================================
 
     private float lastFireTime;
+    private ParticleSystem muzzleFlashInstance;
 
     // =========================================
     // LIFECYCLE
     // =========================================
 
+    void Start()
+    {
+        if (weaponData != null)
+        {
+            weaponName = weaponData.weaponName;
+            damage = weaponData.damage;
+            magazineSize = weaponData.magazineSize;
+            maxMagazineCount = weaponData.maxMagazineCount;
+            fireRate = weaponData.fireRate;
+            reloadTime = weaponData.reloadTime;
+            range = weaponData.range;
+        }
+
+        Transform muzzle = transform.Find("MuzzlePoint");
+        if (muzzle != null) firePoint = muzzle;
+
+        if (muzzleFlashPrefab != null && firePoint != null)
+        {
+            GameObject go = Instantiate(muzzleFlashPrefab, firePoint);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            muzzleFlashInstance = go.GetComponent<ParticleSystem>();
+        }
+    }
+
     public void Init()
     {
-        CurrentAmmo = magazineSize;
-        ReserveAmmo = magazineSize * maxMagazineCount;
+        CurrentAmmo = weaponData.magazineSize;
+        ReserveAmmo = weaponData.magazineSize * weaponData.maxMagazineCount;
         IsReloading = false;
         lastFireTime = 0f;
     }
@@ -64,10 +97,10 @@ public class Weapon : MonoBehaviour
 
     public bool CanFire()
     {
-        if (fireRate <= 0f) return false;
+        if (weaponData.fireRate <= 0f) return false;
         if (IsReloading) return false;
         if (CurrentAmmo <= 0) return false;
-        if (Time.time - lastFireTime < 1f / fireRate) return false;
+        if (Time.time - lastFireTime < 1f / weaponData.fireRate) return false;
         return true;
     }
 
@@ -77,25 +110,38 @@ public class Weapon : MonoBehaviour
 
         CurrentAmmo--;
         lastFireTime = Time.time;
+        SpawnMuzzleFlash();
 
         Ray ray = fpsCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, range))
+        RaycastHit[] hits = Physics.RaycastAll(ray, weaponData != null ? weaponData.range : range, hitLayers);
+        foreach (RaycastHit hit in hits)
         {
-            IDamageable damageable = hit.collider.GetComponent<IDamageable>();
-            if (damageable != null)
-                damageable.TakeDamage(damage);
+            if (hit.collider.CompareTag("Ground"))
+                continue;
 
-            // ----- Hit VFX -----
+            IDamageable damageable = hit.collider.GetComponent<IDamageable>();
+            if (damageable == null) continue;
+
+            damageable.TakeDamage(weaponData.damage);
+
             if (hitEffectPrefab != null)
             {
                 GameObject fx = Instantiate(hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
                 Destroy(fx, hitEffectLifetime);
             }
+            break;
         }
 
         SpawnBulletVisual();
+    }
+
+    void SpawnMuzzleFlash()
+    {
+        if (muzzleFlashInstance == null) return;
+
+        muzzleFlashInstance.Stop();
+        muzzleFlashInstance.Play();
     }
 
     void SpawnBulletVisual()
@@ -127,12 +173,12 @@ public class Weapon : MonoBehaviour
     {
         if (IsReloading) yield break;
         if (ReserveAmmo <= 0) yield break;
-        if (CurrentAmmo >= magazineSize) yield break;
+        if (CurrentAmmo >= weaponData.magazineSize) yield break;
 
         IsReloading = true;
-        yield return new WaitForSeconds(reloadTime);
+        yield return new WaitForSeconds(weaponData.reloadTime);
 
-        int needed = magazineSize - CurrentAmmo;
+        int needed = weaponData.magazineSize - CurrentAmmo;
         int refill = Mathf.Min(needed, ReserveAmmo);
         ReserveAmmo -= refill;
         CurrentAmmo += refill;

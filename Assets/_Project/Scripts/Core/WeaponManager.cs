@@ -39,8 +39,6 @@ public class WeaponManager : MonoBehaviour
 
     void Start()
     {
-        Debug.Log($"[WeaponManager] Start — weapons array length: {(weapons != null ? weapons.Length.ToString() : "null")}");
-
         if (weapons == null || weapons.Length == 0)
         {
             Debug.LogWarning("[WeaponManager] No weapons assigned in Inspector, auto-scanning WeaponHolder...");
@@ -56,18 +54,14 @@ public class WeaponManager : MonoBehaviour
         foreach (var w in weapons)
         {
             if (w == null) { Debug.LogWarning("[WeaponManager] Skipping null weapon entry"); continue; }
-            Debug.Log($"[WeaponManager] Init + deactivate: {w.name}");
             w.fpsCamera = fpsCamera;
-            w.firePoint = firePoint;
+            if (w.firePoint == null) w.firePoint = firePoint;
             w.Init();
             w.gameObject.SetActive(false);
         }
 
         if (weapons.Length > 0)
-        {
-            Debug.Log($"[WeaponManager] Switching to weapon 0: {weapons[0].name}");
             SwitchWeapon(0);
-        }
     }
 
     void Update()
@@ -106,7 +100,6 @@ public class WeaponManager : MonoBehaviour
         CurrentWeapon = weapons[index];
         CurrentWeaponIndex = index;
         CurrentWeapon.gameObject.SetActive(true);
-        Debug.Log($"[WeaponManager] Active weapon: {CurrentWeapon.name}");
 
         OnWeaponSwitched?.Invoke(CurrentWeapon);
     }
@@ -126,6 +119,5 @@ public class WeaponManager : MonoBehaviour
             if (w != null) list.Add(w);
         }
         weapons = list.ToArray();
-        Debug.Log($"[WeaponManager] Auto-populated {weapons.Length} weapons from WeaponHolder");
     }
 }

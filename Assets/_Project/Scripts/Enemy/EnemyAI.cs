@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
+using TMPro;
 
 public enum EnemyState
 {
@@ -38,6 +39,7 @@ public class EnemyAI : MonoBehaviour, IDamageable
     [Header("Health Bar UI")]
     public Slider hpSlider;
     public Image hpFillImage;
+    public TMP_Text hpText;
     public Canvas hpCanvas;
     public float hpBarHeight = 2.5f;
 
@@ -59,9 +61,23 @@ public class EnemyAI : MonoBehaviour, IDamageable
     private float patrolTimer;
 
 
+    // =========================================
+    // EVENTS (decoupled communication)
+    // =========================================
+
+    public static System.Action OnEnemyKilled;
+
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
@@ -76,7 +92,6 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
         agent.speed = baseSpeed * speedMultiplier;
 
-        InitHealth();
         FixHeight();
         InitializePatrol();
     }
@@ -89,12 +104,14 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
     void OnEnable()
     {
+        FixHeight();
         if (agent != null)
         {
-            InitHealth();
-            FixHeight();
+            agent.Warp(transform.position);
             InitializePatrol();
         }
+        InitHealth();
+        GameManager.Instance?.RegisterEnemy(this);
     }
 
     void OnDisable()
@@ -104,6 +121,7 @@ public class EnemyAI : MonoBehaviour, IDamageable
             agent.isStopped = true;
             agent.ResetPath();
         }
+        GameManager.Instance?.UnregisterEnemy(this);
     }
 
     // =========================================
@@ -112,11 +130,8 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
     public void TakeDamage(int amount)
     {
-        // --- MODIFIED: subtract health instead of insta-kill ---
         currentHealth -= amount;
         UpdateHPBar();
-
-        Debug.Log($"[EnemyAI] Took {amount} damage, HP: {currentHealth}/{maxHealth}");
 
         if (currentHealth <= 0)
             Die();
@@ -124,7 +139,6 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
     void Die()
     {
-        // ----- Death VFX -----
         if (deathParticlePrefab != null)
         {
             GameObject fx = Instantiate(deathParticlePrefab, transform.position, Quaternion.identity);
@@ -133,8 +147,7 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
         ReturnToPool();
 
-        if (GameManager.Instance != null)
-            GameManager.Instance.OnEnemyKilled();
+        OnEnemyKilled?.Invoke();
     }
 
     void UpdateHPBar()
@@ -145,10 +158,14 @@ public class EnemyAI : MonoBehaviour, IDamageable
             hpSlider.value = currentHealth;
         }
 
-        // --- MODIFIED: fill color (green → yellow → red) ---
+        if (hpText != null)
+            hpText.text = $"{currentHealth}/{maxHealth}";
+
         if (hpFillImage != null)
         {
             float pct = (float)currentHealth / maxHealth;
+            hpFillImage.fillAmount = pct;
+
             if (pct > 0.6f)
                 hpFillImage.color = Color.green;
             else if (pct > 0.3f)
@@ -266,8 +283,6 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
         if (playerHealth != null)
             playerHealth.TakeDamage(damage);
-
-        Debug.Log("Enemy Attack Player");
     }
 
     // =========================================
@@ -301,6 +316,11 @@ public class EnemyAI : MonoBehaviour, IDamageable
     {
         speedMultiplier = multiplier;
         agent.speed = baseSpeed * speedMultiplier;
+    }
+
+    public int GetCurrentHealth()
+    {
+        return currentHealth;
     }
 
     public void ReturnToPool()

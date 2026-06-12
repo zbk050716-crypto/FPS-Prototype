@@ -243,7 +243,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2afe124740423a947a4dc594ed8fb1ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponData: {fileID: 11400000, guid: ad1d11f6a4348ab47a9e45513995b50b, type: 2}
+  weaponData: {fileID: 11400000, guid: a4cda8044b7b302448817fd231ab8ab6, type: 2}
+  weaponName: New Weapon
+  damage: 25
+  magazineSize: 30
+  maxMagazineCount: 3
+  fireRate: 10
+  reloadTime: 1.5
+  range: 100
+  muzzleFlashPrefab: {fileID: 0}
+  hitEffectPrefab: {fileID: 0}
+  hitEffectLifetime: 1
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  firePoint: {fileID: 0}
 --- !u!1 &1748277932983872
 GameObject:
   m_ObjectHideFlags: 0

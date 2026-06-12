@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class EnemyPool : MonoBehaviour
 {
@@ -32,17 +33,13 @@ public class EnemyPool : MonoBehaviour
 
     public GameObject GetEnemy()
     {
-        GameObject obj;
-
-        if (pool.Count > 0)
+        if (pool.Count == 0)
         {
-            obj = pool.Dequeue();
-        }
-        else
-        {
-            obj = Instantiate(enemyPrefab);
+            Debug.LogWarning("[EnemyPool] 对象池已耗尽，无法生成更多敌人");
+            return null;
         }
 
+        GameObject obj = pool.Dequeue();
         obj.transform.position = GetRandomSpawnPoint();
         obj.SetActive(true);
         activeEnemies.Add(obj);
@@ -73,9 +70,17 @@ public class EnemyPool : MonoBehaviour
             return spawnArea.position;
 
         Bounds bounds = groundRenderer.bounds;
-        float x = Random.Range(bounds.min.x, bounds.max.x);
-        float z = Random.Range(bounds.min.z, bounds.max.z);
 
-        return new Vector3(x, 0.5f, z);
+        for (int i = 0; i < 10; i++)
+        {
+            float x = Random.Range(bounds.min.x, bounds.max.x);
+            float z = Random.Range(bounds.min.z, bounds.max.z);
+            Vector3 candidate = new Vector3(x, 100f, z);
+
+            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 200f, NavMesh.AllAreas))
+                return hit.position;
+        }
+
+        return spawnArea.position;
     }
 }

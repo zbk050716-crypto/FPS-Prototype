@@ -24,19 +24,6 @@ public class Bullet : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Enemy"))
-        {
-            EnemyAI enemy = collision.gameObject.GetComponent<EnemyAI>();
-            if (enemy != null)
-            {
-                enemy.ReturnToPool();
-                if (GameManager.Instance != null)
-                {
-                    GameManager.Instance.OnEnemyKilled();
-                }
-            }
-        }
-
         ReturnToPool();
     }
 }
