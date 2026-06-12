@@ -205,6 +205,8 @@ public class GameManager : MonoBehaviour
 
     public void HandleEnemyKilled()
     {
+
+        Debug.Log("HandleEnemyKilled 被调用");
         killCount++;
 
         UpdateWave();

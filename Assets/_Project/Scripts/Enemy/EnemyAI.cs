@@ -7,7 +7,8 @@ public enum EnemyState
 {
     Patrol,
     Chase,
-    Attack
+    Attack,
+    Dead
 }
 
 public class EnemyAI : MonoBehaviour, IDamageable
@@ -59,6 +60,8 @@ public class EnemyAI : MonoBehaviour, IDamageable
     public float patrolWaitTime = 2f;
     private Vector3 patrolTarget;
     private float patrolTimer;
+
+    private bool stateJustEntered;
 
 
     // =========================================
@@ -130,13 +133,17 @@ public class EnemyAI : MonoBehaviour, IDamageable
 
     public void TakeDamage(int amount)
     {
+        if (currentState == EnemyState.Dead)
+            return;
+
         currentHealth -= amount;
         UpdateHPBar();
 
         if (currentHealth <= 0)
-            Die();
+            ChangeState(EnemyState.Dead);
     }
 
+    // Legacy method, replaced by FSM DeadState()
     void Die()
     {
         if (deathParticlePrefab != null)
@@ -221,14 +228,26 @@ public class EnemyAI : MonoBehaviour, IDamageable
         hpCanvas.transform.position = hpPos;
     }
 
+    void ChangeState(EnemyState newState)
+    {
+        if (currentState == newState)
+            return;
+
+        currentState = newState;
+        stateJustEntered = true;
+    }
+
     void UpdateState(float distance)
     {
+        if (currentState == EnemyState.Dead)
+            return;
+
         if (distance <= attackRange)
-            currentState = EnemyState.Attack;
+            ChangeState(EnemyState.Attack);
         else if (distance <= chaseRange)
-            currentState = EnemyState.Chase;
+            ChangeState(EnemyState.Chase);
         else
-            currentState = EnemyState.Patrol;
+            ChangeState(EnemyState.Patrol);
     }
 
     void HandleState()
@@ -238,7 +257,35 @@ public class EnemyAI : MonoBehaviour, IDamageable
             case EnemyState.Patrol: Patrol(); break;
             case EnemyState.Chase:  Chase();  break;
             case EnemyState.Attack: AttackState(); break;
+            case EnemyState.Dead:   DeadState(); break;
         }
+    }
+
+    void DeadState()
+    {
+        if (!stateJustEntered)
+            return;
+
+        stateJustEntered = false;
+
+        if (deathParticlePrefab != null)
+        {
+            GameObject fx = Instantiate(
+                deathParticlePrefab,
+                transform.position,
+                Quaternion.identity);
+
+            Destroy(fx, deathParticleLifetime);
+        }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayEnemyDeath();
+
+        ReturnToPool();
+
+        OnEnemyKilled?.Invoke();
+
+        Debug.Log("ENTER DEAD STATE");
     }
 
     // =========================================
