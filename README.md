@@ -1,33 +1,85 @@
 # FPS Prototype
 
-A Unity FPS combat prototype developed independently using C#.
+A Unity-based first-person shooter prototype developed independently using C#.
 
-## Features
+This project focuses on core gameplay systems, combat mechanics, AI behavior, and real-time interaction optimization.
 
-- First-person character controller
-- Raycast shooting system
+---
+
+## 🎮 Gameplay Preview
+
+### 🔫 FPS Combat Demo
+
+![FPS Demo](images/fps.gif)
+
+---
+
+## 🧩 Core Features
+
+### 🕹 Gameplay System
+- First-person character controller (WASD + mouse look)
 - Weapon switching system
-- Enemy AI with FSM (Patrol / Chase / Attack / Dead)
-- Health system
-- Level progression system
+- Pause menu system
+
+### 🔫 Combat System
+- Raycast-based shooting (instant hit detection)
+- Health system for player and enemies
 - Enemy spawn system
-- Pause menu
-- Object Pooling
 
-## Technologies
+### 🤖 AI System
+- Enemy AI implemented using Finite State Machine (FSM)
+  - Patrol
+  - Chase
+  - Attack
+  - Dead state
 
-- Unity
+### ⚙️ Optimization & Architecture
+- Object Pooling system to reduce Instantiate/Destroy overhead
+- Modular system design for scalability and maintainability
+
+### 🎯 Game Loop
+- Basic level progression system
+
+---
+
+## 🧠 Technical Highlights
+
+- Replaced projectile bullets with Raycast system for instant feedback and performance improvement
+- Designed FSM-based AI architecture for scalable enemy behavior control
+- Implemented object pooling to optimize runtime performance
+- Decoupled gameplay systems into modular components for better maintainability
+
+---
+
+## 🛠 Technologies
+
+- Unity Engine
 - C#
 - CharacterController
-- Raycast
-- Object Pool
+- Physics Raycast
 - Finite State Machine (FSM)
+- Object Pooling
 - Git
 
-## Project Goal
+---
 
-This project was created to practice gameplay programming, combat systems, AI behaviors and Unity client-side development.
+## 🎥 Demo Video
 
-## Author
+Add your video link here (Bilibili / YouTube)
 
-ZBK
+---
+
+## 🎯 Project Goal
+
+This project was built to strengthen Unity gameplay programming skills, focusing on:
+
+- FPS combat system design
+- AI behavior architecture
+- Real-time interaction systems
+- Performance optimization techniques in Unity
+
+---
+
+## 👤 Author
+
+章炳锟
