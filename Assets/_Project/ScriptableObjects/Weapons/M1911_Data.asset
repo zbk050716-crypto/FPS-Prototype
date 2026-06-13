@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: M1911_Data
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
-  weaponName: New Weapon
+  weaponName: M1911
   damage: 15
   magazineSize: 30
   maxMagazineCount: 3

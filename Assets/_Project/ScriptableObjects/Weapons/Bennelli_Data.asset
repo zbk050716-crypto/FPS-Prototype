@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: Bennelli_Data
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
-  weaponName: New Weapon
+  weaponName: Bennelli_M4
   damage: 40
   magazineSize: 6
   maxMagazineCount: 3
