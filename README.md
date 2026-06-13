@@ -33,7 +33,7 @@ This project focuses on core gameplay systems, combat mechanics, AI behavior, an
   - Attack
   - Dead state
 
-### ⚙️ Optimization & Architecture
+### ⚙️ Optimization
 - Object Pooling system to reduce Instantiate/Destroy overhead
 - Modular system design for scalability and maintainability
 
@@ -44,10 +44,10 @@ This project focuses on core gameplay systems, combat mechanics, AI behavior, an
 
 ## 🧠 Technical Highlights
 
-- Replaced projectile bullets with Raycast system for instant feedback and performance improvement
-- Designed FSM-based AI architecture for scalable enemy behavior control
-- Implemented object pooling to optimize runtime performance
-- Decoupled gameplay systems into modular components for better maintainability
+- Raycast-based shooting system for instant hit detection and improved responsiveness
+- FSM-based enemy AI architecture for scalable behavior control
+- Object Pooling to optimize runtime performance and reduce memory overhead
+- Modular design separating gameplay systems for better maintainability
 
 ---
 
@@ -60,23 +60,6 @@ This project focuses on core gameplay systems, combat mechanics, AI behavior, an
 - Finite State Machine (FSM)
 - Object Pooling
 - Git
-
----
-
-## 🎥 Demo Video
-
-Add your video link here (Bilibili / YouTube)
-
----
-
-## 🎯 Project Goal
-
-This project was built to strengthen Unity gameplay programming skills, focusing on:
-
-- FPS combat system design
-- AI behavior architecture
-- Real-time interaction systems
-- Performance optimization techniques in Unity
 
 ---
 
